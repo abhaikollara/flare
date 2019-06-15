@@ -1,5 +1,8 @@
 import torch
+from torch.utils.data import DataLoader
+from .data import FlareDataset
 import math
+import time
 
 
 class Trainer(object):
@@ -10,14 +13,23 @@ class Trainer(object):
         self.optimizer = optimizer
         self.device = torch.device(device)
     
-    def train(self):
-        pass
+    def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
+        dataset = FlareDataset(inputs, targets)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+        return self.train_generator(dataloader)
     
-    def evaluate(self):
-        pass
+    def evaluate(self, inputs, targets, batch_size=32):
+        dataset = FlareDataset(inputs, targets)
+        dataloader = DataLoader(dataset, batch_size=batch_size)
+
+        return self.evaluate_generator(dataloader)
     
-    def predict(self):
-        pass
+    def predict(self, inputs, batch_size=32):
+        dataset = FlareDataset(inputs)
+        dataloader = DataLoader(dataset, batch_size=batch_size)
+
+        return self.predict_generator(dataloader)
 
     def train_generator(self, dataloader, epochs=1):
         avg_loss = 0.
@@ -30,8 +42,10 @@ class Trainer(object):
                 #TODO: Seperate out print logic. Implement callbacks
                 if batch_no > 0:
                     print("\r", end="")
-                print(f"Batch {batch_no+1}/{n_batches} Loss {round(avg_loss,4)}", end="")
+                print(f" Batch {batch_no+1}/{n_batches} Loss {round(avg_loss,4)}", end="")
             print("\n")
+        
+        return avg_loss
     
     def evaluate_generator(self, dataloader):
         avg_loss = 0.
@@ -43,6 +57,8 @@ class Trainer(object):
             #TODO: Seperate out print logic. Implement callbacks
         avg_loss /= n_batches
         print("Average Loss", avg_loss)
+
+        return avg_loss
     
     def predict_generator(self, dataloader):
         outs = []
@@ -54,7 +70,6 @@ class Trainer(object):
             if batch_no > 0:
                 print("\r", end="")
             print(f"Batch {batch_no+1}/{n_batches}", end="")
-
         return torch.cat(outs)
 
     def train_batch(self, inputs, targets):
@@ -69,7 +84,6 @@ class Trainer(object):
         loss = self.loss_fn(output, targets)
         loss.backward()
         self.optimizer.step()
-
         return loss.item()
     
     def evaluate_batch(self, inputs, targets):
