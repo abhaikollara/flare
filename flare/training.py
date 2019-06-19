@@ -56,7 +56,7 @@ class Trainer(object):
             avg_loss += batch_loss
             #TODO: Seperate out print logic. Implement callbacks
         avg_loss /= n_batches
-        print("Average Loss", avg_loss)
+        print("Average Loss", round(avg_loss, 4))
 
         return avg_loss
     
