@@ -33,7 +33,7 @@ class Trainer(object):
 
     def train_generator(self, dataloader, epochs=1):
         avg_loss = 0.
-
+        n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
         else:
@@ -55,7 +55,12 @@ class Trainer(object):
     def evaluate_generator(self, dataloader):
         avg_loss = 0.
         print("Evaluating")
-        n_batches = math.ceil(len(dataloader.dataset)/dataloader.batch_size)
+        n_batches = len(dataloader.dataset)/dataloader.batch_size
+        if dataloader.drop_last:
+            n_batches = int(n_batches)
+        else:
+            n_batches = math.ceil(n_batches)
+
         for batch_no, (x, y) in enumerate(dataloader):
             batch_loss = self.evaluate_batch(x, y)
             avg_loss += batch_loss
@@ -67,7 +72,12 @@ class Trainer(object):
     
     def predict_generator(self, dataloader):
         outs = []
-        n_batches = math.ceil(len(dataloader.dataset)/dataloader.batch_size)
+        n_batches = len(dataloader.dataset)/dataloader.batch_size
+        if dataloader.drop_last:
+            n_batches = int(n_batches)
+        else:
+            n_batches = math.ceil(n_batches)
+
         print("Predicting")
         for batch_no, x in enumerate(dataloader):
             out = self.predict_batch(x)
