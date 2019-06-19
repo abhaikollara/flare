@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from .data import FlareDataset
+from .data import FlareDataset, convert_to_tensor
 import math
 import time
 
@@ -91,6 +91,9 @@ class Trainer(object):
         if not self.model.training:
             self.model.train()
 
+        inputs = convert_to_tensor(inputs)
+        targets = convert_to_tensor(targets)
+
         inputs = inputs.to(self.device)
         targets = targets.to(self.device)
 
@@ -105,6 +108,9 @@ class Trainer(object):
         if self.model.training:
             self.model.eval()
 
+        inputs = convert_to_tensor(inputs)
+        targets = convert_to_tensor(targets)
+
         inputs = inputs.to(self.device)
         targets = targets.to(self.device)
 
@@ -118,6 +124,7 @@ class Trainer(object):
         if self.model.training:
             self.model.eval()
 
+        inputs = convert_to_tensor(inputs)
         inputs = inputs.to(self.device)
 
         with torch.no_grad():
