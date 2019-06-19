@@ -33,7 +33,12 @@ class Trainer(object):
 
     def train_generator(self, dataloader, epochs=1):
         avg_loss = 0.
-        n_batches = math.ceil(len(dataloader.dataset)/dataloader.batch_size)
+
+        if dataloader.drop_last:
+            n_batches = int(n_batches)
+        else:
+            n_batches = math.ceil(n_batches)
+
         for i in range(epochs):
             print("Epoch", i+1)
             for batch_no, (x, y) in enumerate(dataloader):
