@@ -59,7 +59,6 @@ class Trainer(object):
     
     def evaluate_generator(self, dataloader):
         self.callbacks.on_eval_begin()
-        avg_loss = 0.
         n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
@@ -72,12 +71,8 @@ class Trainer(object):
             batch_loss = self.evaluate_batch(x, y)
             logs['batch_loss'] = batch_loss
             self.callbacks.on_eval_batch_end(logs=logs)
-            # avg_loss += batch_loss
-        # avg_loss /= n_batches
-        # print("Average Loss", round(avg_loss, 4))
 
         self.callbacks.on_eval_end()
-        # return avg_loss
     
     def predict_generator(self, dataloader):
         outs = []
