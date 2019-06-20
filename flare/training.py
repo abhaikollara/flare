@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from .data import FlareDataset
+from .callbacks import CallbackList, LossHistory
 import math
 import time
 
@@ -12,12 +13,13 @@ class Trainer(object):
         self.loss_fn = loss
         self.optimizer = optimizer
         self.device = torch.device(device)
+        self.callbacks = CallbackList([LossHistory()])
     
     def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
         dataset = FlareDataset(inputs, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-        return self.train_generator(dataloader)
+        return self.train_generator(dataloader, epochs=epochs)
     
     def evaluate(self, inputs, targets, batch_size=32):
         dataset = FlareDataset(inputs, targets)
@@ -32,43 +34,50 @@ class Trainer(object):
         return self.predict_generator(dataloader)
 
     def train_generator(self, dataloader, epochs=1):
-        avg_loss = 0.
+        self.callbacks.on_train_begin()
+
         n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
         else:
             n_batches = math.ceil(n_batches)
 
+        logs = {'n_batches':n_batches}
         for i in range(epochs):
-            print("Epoch", i+1)
+            self.callbacks.on_epoch_begin(logs={'epoch':i})
+
             for batch_no, (x, y) in enumerate(dataloader):
+                logs['batch_no'] = batch_no
+                self.callbacks.on_train_batch_begin(logs=logs)
                 batch_loss = self.train_batch(x, y)
-                avg_loss = ((avg_loss * batch_no) + batch_loss)/ (batch_no + 1)
-                #TODO: Seperate out print logic. Implement callbacks
-                if batch_no > 0:
-                    print("\r", end="")
-                print(f" Batch {batch_no+1}/{n_batches} Loss {round(avg_loss,4)}", end="")
-            print("\n")
+                logs['batch_loss'] = batch_loss
+                self.callbacks.on_train_batch_end(logs=logs)
+
+            self.callbacks.on_epoch_end(logs={'epoch':i})
         
-        return avg_loss
+        self.callbacks.on_train_end()
     
     def evaluate_generator(self, dataloader):
+        self.callbacks.on_eval_begin()
         avg_loss = 0.
-        print("Evaluating")
         n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
         else:
             n_batches = math.ceil(n_batches)
-
+        logs = {'n_batches': n_batches}
         for batch_no, (x, y) in enumerate(dataloader):
+            logs['batch_no'] = batch_no
+            self.callbacks.on_eval_batch_begin(logs=logs)
             batch_loss = self.evaluate_batch(x, y)
-            avg_loss += batch_loss
-            #TODO: Seperate out print logic. Implement callbacks
-        avg_loss /= n_batches
-        print("Average Loss", round(avg_loss, 4))
+            logs['batch_loss'] = batch_loss
+            self.callbacks.on_eval_batch_end(logs=logs)
+            # avg_loss += batch_loss
+        # avg_loss /= n_batches
+        # print("Average Loss", round(avg_loss, 4))
 
-        return avg_loss
+        self.callbacks.on_eval_end()
+        # return avg_loss
     
     def predict_generator(self, dataloader):
         outs = []
