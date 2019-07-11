@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
 from .data import FlareDataset
-from .callbacks import CallbackList, LossHistory
+from .callbacks import CallbackList, Baselogger
+from .metrics import Accuracy
 import math
 import time
 
@@ -13,7 +14,11 @@ class Trainer(object):
         self.loss_fn = loss
         self.optimizer = optimizer
         self.device = torch.device(device)
-        self.callbacks = CallbackList([LossHistory()])
+
+        # Callbacks and metrics
+        self.metric = Accuracy()
+        self.history = Baselogger(metric=self.metric)
+        self.callbacks = CallbackList([self.history])
     
     def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
         dataset = FlareDataset(inputs, targets)
@@ -46,11 +51,13 @@ class Trainer(object):
         for i in range(epochs):
             self.callbacks.on_epoch_begin(logs={'epoch':i})
 
-            for batch_no, (x, y) in enumerate(dataloader):
+            for batch_no, (x, Y) in enumerate(dataloader):
                 logs['batch_no'] = batch_no
                 self.callbacks.on_train_batch_begin(logs=logs)
-                batch_loss = self.train_batch(x, y)
+                batch_loss, y = self.train_batch(x, Y)
                 logs['batch_loss'] = batch_loss
+                logs['y'] = y
+                logs['Y'] = Y
                 self.callbacks.on_train_batch_end(logs=logs)
 
             self.callbacks.on_epoch_end(logs={'epoch':i})
@@ -65,11 +72,13 @@ class Trainer(object):
         else:
             n_batches = math.ceil(n_batches)
         logs = {'n_batches': n_batches}
-        for batch_no, (x, y) in enumerate(dataloader):
+        for batch_no, (x, Y) in enumerate(dataloader):
             logs['batch_no'] = batch_no
             self.callbacks.on_eval_batch_begin(logs=logs)
-            batch_loss = self.evaluate_batch(x, y)
+            batch_loss, y = self.evaluate_batch(x, Y)
             logs['batch_loss'] = batch_loss
+            logs['y'] = y
+            logs['Y'] = Y
             self.callbacks.on_eval_batch_end(logs=logs)
 
         self.callbacks.on_eval_end()
@@ -103,7 +112,7 @@ class Trainer(object):
         loss = self.loss_fn(output, targets)
         loss.backward()
         self.optimizer.step()
-        return loss.item()
+        return loss.item(), output
     
     def evaluate_batch(self, inputs, targets):
         if self.model.training:
@@ -116,7 +125,7 @@ class Trainer(object):
             output = self.model(inputs)
             loss = self.loss_fn(output, targets)
 
-        return loss.item()
+        return loss.item(), output
     
     def predict_batch(self, inputs):
         if self.model.training:
