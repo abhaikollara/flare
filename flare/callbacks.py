@@ -102,28 +102,36 @@ class Baselogger(Callback):
         batch_no = logs['batch_no']
         n_batches = logs['n_batches']
         batch_loss = logs['batch_loss']
-        batch_metric_value = self.metric(logs['y'], logs['Y']).item()
         self.train_loss = ((self.train_loss * batch_no) + batch_loss)/ (batch_no + 1)
         if self.metric is not None:
+            batch_metric_value = self.metric(logs['y'], logs['Y']).item()
             self.metric_value = ((self.metric_value * batch_no) + batch_metric_value)/ (batch_no + 1)
 
         if batch_no > 0:
             print("\r", end="")
-        print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.train_loss,4)} Metric {round(self.metric_value,4)}", end="")
-    
+        
+        if self.metric is not None:
+            print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.train_loss,4)} {self.metric.name} {round(self.metric_value,4)}", end="")
+        else:
+            print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.train_loss,4)}", end="")
+
     def on_eval_batch_end(self, logs={}):
         batch_no = logs['batch_no']
         n_batches = logs['n_batches']
         batch_loss = logs['batch_loss']
-        batch_metric_value = self.metric(logs['y'], logs['Y']).item()
         self.test_loss = ((self.test_loss * batch_no) + batch_loss)/ (batch_no + 1)
         if self.metric is not None:
+            batch_metric_value = self.metric(logs['y'], logs['Y']).item()
             self.metric_value = ((self.metric_value * batch_no) + batch_metric_value)/ (batch_no + 1)
 
         if batch_no > 0:
             print("\r", end="")
-        print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.test_loss,4)} Metric {round(self.metric_value,4)}", end="")
-    
+
+        if self.metric is not None:
+            print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.test_loss,4)} {self.metric.name} {round(self.metric_value,4)}", end="")
+        else:
+            print(f" Batch {batch_no+1}/{n_batches} Loss {round(self.test_loss,4)}", end="")
+
     def on_eval_end(self, logs={}):
         self.test_loss_history.append(self.test_loss)
         self.test_loss = 0.0
@@ -135,9 +143,3 @@ class Baselogger(Callback):
         self.train_loss = 0.0
         self.metric_value = 0.0
         print("\n")
-
-
-class MetricCallback(Callback):
-
-    def on_train_batch_end(self, logs={}):
-        pass

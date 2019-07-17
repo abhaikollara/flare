@@ -2,21 +2,23 @@ import torch
 from torch.utils.data import DataLoader
 from .data import FlareDataset
 from .callbacks import CallbackList, Baselogger
-from .metrics import Accuracy
+from .metrics import Accuracy, Metric
 import math
 import time
 
 
 class Trainer(object):
 
-    def __init__(self, model, loss, optimizer, device="cpu"):
+    def __init__(self, model, loss, optimizer, device="cpu", metric=None):
         self.model = model
         self.loss_fn = loss
         self.optimizer = optimizer
         self.device = torch.device(device)
 
         # Callbacks and metrics
-        self.metric = Accuracy()
+        self.metric = metric
+        if self.metric is not None and not isinstance(self.metric, Metric):
+            raise TypeError("metric must be an instance of Metric")
         self.history = Baselogger(metric=self.metric)
         self.callbacks = CallbackList([self.history])
     
