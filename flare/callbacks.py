@@ -1,6 +1,8 @@
 
 class Callback(object):
 
+    def set_trainer(self, trainer):
+        self.trainer = trainer
 
     def on_train_begin(self, logs={}):
         pass
@@ -34,8 +36,10 @@ class Callback(object):
 
 class CallbackList(object):
 
-    def __init__(self, callbacks=[]):
+    def __init__(self, trainer, callbacks=[]):
         self.callbacks = callbacks
+        for callback in callbacks:
+            callback.set_trainer(trainer)
 
     def on_train_begin(self, logs={}):
         for cbk in self.callbacks:

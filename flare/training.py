@@ -20,7 +20,7 @@ class Trainer(object):
         if self.metric is not None and not isinstance(self.metric, Metric):
             raise TypeError("metric must be an instance of Metric")
         self.history = Baselogger(metric=self.metric)
-        self.callbacks = CallbackList([self.history])
+        self.callbacks = CallbackList(self, [self.history])
     
     def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
         dataset = FlareDataset(inputs, targets)
