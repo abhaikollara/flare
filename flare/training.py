@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from .data import FlareDataset
+from .data import FlareDataset, convert_to_tensor
 from .callbacks import CallbackList, Baselogger, MetricLogger
 from .metrics import Accuracy, Metric, Loss
 import math
@@ -149,4 +149,3 @@ class Trainer(object):
             output = self.model(inputs)
 
         return output
-
