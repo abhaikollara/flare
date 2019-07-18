@@ -17,7 +17,7 @@ class Trainer(object):
 
         # Callbacks and metrics
         self.metrics = metrics
-        self.history = Baselogger(metric=self.metrics)
+        self.history = Baselogger(metrics=self.metrics)
         self.callbacks = CallbackList(self, [self.history])
         
         if self.metrics is not None:

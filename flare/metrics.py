@@ -13,7 +13,7 @@ class Metric(object):
     def reset_states(self):
         self.value = 0.0
     
-    def batch_update(self, y, Y):
+    def batch_update(self, logs):
         raise NotImplementedError
 
     def __str__(self):
@@ -25,7 +25,10 @@ class Metric(object):
 
 class AverageMetric(Metric):
 
-    def batch_update(self, batch_no, y, Y):
+    def batch_update(self, logs):
+        batch_no = logs['batch_no']
+        y = logs['y']
+        Y = logs['Y']
         batch_val = self.call(y, Y).item()
         self.value = (self.value * batch_no + batch_val)/ (batch_no + 1)
 
