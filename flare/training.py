@@ -17,9 +17,7 @@ class Trainer(object):
 
         # Callbacks and metrics
         self.metrics = [Loss(), *metrics]
-        self.history = Baselogger(metrics=self.metrics)
-        self.callbacks = CallbackList(self, [self.history])
-        self.callbacks.append(MetricLogger(self.metrics))
+        self.callbacks = CallbackList(self, [Baselogger(metrics=self.metrics), MetricLogger(self.metrics)])
 
         for metric in self.metrics:
             if not isinstance(metric, Metric):# Check for all
