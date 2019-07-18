@@ -1,4 +1,7 @@
 __pycache__
-*.ipynb
+*.ipynb*
 *egg-info
 .vscode
+examples/data
+dev_tools.py
+.pytest*
