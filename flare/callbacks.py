@@ -88,11 +88,6 @@ class CallbackList(object):
 class Baselogger(Callback):
 
     def __init__(self, metrics=None):
-        self.train_loss = 0.0
-        self.test_loss = 0.0
-        self.train_loss_history = []
-        self.test_loss_history = []
-
         self.metrics = metrics
 
     def on_train_begin(self, logs={}):
@@ -107,43 +102,33 @@ class Baselogger(Callback):
     def on_train_batch_end(self, logs={}):
         batch_no = logs['batch_no']
         n_batches = logs['n_batches']
-        batch_loss = logs['batch_loss']
-        self.train_loss = ((self.train_loss * batch_no) + batch_loss)/ (batch_no + 1)
 
         if batch_no > 0:
             print("\r", end="")
         
-        console_text = f" Batch {batch_no+1}/{n_batches} Loss {round(self.train_loss,4)}"
-        if self.metrics is not None:
-            metric_logs = [f"{m.name} {round(m.value, 4)}" for m in self.trainer.metrics]
-            console_text = " ".join([console_text, *metric_logs])
+        console_text = f" Batch {batch_no+1}/{n_batches}"
+        metric_logs = [f"{m.name} {round(m.value, 4)}" for m in self.metrics]
+        console_text = " ".join([console_text, *metric_logs])
 
         print(console_text, end="")
 
     def on_eval_batch_end(self, logs={}):
         batch_no = logs['batch_no']
         n_batches = logs['n_batches']
-        batch_loss = logs['batch_loss']
-        self.test_loss = ((self.test_loss * batch_no) + batch_loss)/ (batch_no + 1)
 
         if batch_no > 0:
             print("\r", end="")
         
-        console_text = f" Batch {batch_no+1}/{n_batches} Loss {round(self.test_loss,4)}"
-        if self.metrics is not None:
-            metric_logs = [f"{m.name} {round(m.value, 4)}" for m in self.trainer.metrics]
-            console_text = " ".join([console_text, *metric_logs])
+        console_text = f" Batch {batch_no+1}/{n_batches} "
+        metric_logs = [f"{m.name} {round(m.value, 4)}" for m in self.trainer.metrics]
+        console_text = " ".join([console_text, *metric_logs])
         
         print(console_text, end="")
 
     def on_eval_end(self, logs={}):
-        self.test_loss_history.append(self.test_loss)
-        self.test_loss = 0.0
         print("\n")
 
     def on_epoch_end(self, logs={}):
-        self.train_loss_history.append(self.train_loss)
-        self.train_loss = 0.0
         print("\n")
 
 
@@ -157,6 +142,10 @@ class MetricLogger(Callback):
     def on_train_begin(self, logs={}):
         for m in self.metrics:
             m.reset_states()
+
+    def on_train_end(self, logs):
+        print(self.train_logs)
+        print(self.test_logs)
 
     def on_eval_begin(self, logs={}):
         for m in self.metrics:

@@ -32,6 +32,13 @@ class AverageMetric(Metric):
         batch_val = self.call(y, Y).item()
         self.value = (self.value * batch_no + batch_val)/ (batch_no + 1)
 
+class Loss(Metric):
+
+    def batch_update(self, logs):
+        batch_val = logs['batch_loss']
+        batch_no = logs['batch_no']
+        self.value = (self.value * batch_no + batch_val)/ (batch_no + 1)
+
 
 class Accuracy(AverageMetric):
 
