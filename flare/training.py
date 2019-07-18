@@ -1,23 +1,35 @@
 import torch
 from torch.utils.data import DataLoader
-from .data import FlareDataset, convert_to_tensor
+from .data import FlareDataset
+from .callbacks import CallbackList, Baselogger, MetricLogger
+from .metrics import Accuracy, Metric, Loss
 import math
 import time
 
 
 class Trainer(object):
 
-    def __init__(self, model, loss, optimizer, device="cpu"):
+    def __init__(self, model, loss, optimizer, device="cpu", metrics=[]):
         self.model = model
         self.loss_fn = loss
         self.optimizer = optimizer
         self.device = torch.device(device)
+
+        # Callbacks and metrics
+        self.metrics = [Loss(), *metrics]
+        self.history = Baselogger(metrics=self.metrics)
+        self.callbacks = CallbackList(self, [self.history])
+        self.callbacks.append(MetricLogger(self.metrics))
+
+        for metric in self.metrics:
+            if not isinstance(metric, Metric):# Check for all
+                raise TypeError("metric must be an instance of Metric")
     
     def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
         dataset = FlareDataset(inputs, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-        return self.train_generator(dataloader)
+        return self.train_generator(dataloader, epochs=epochs)
     
     def evaluate(self, inputs, targets, batch_size=32):
         dataset = FlareDataset(inputs, targets)
@@ -32,43 +44,49 @@ class Trainer(object):
         return self.predict_generator(dataloader)
 
     def train_generator(self, dataloader, epochs=1):
-        avg_loss = 0.
+        self.callbacks.on_train_begin()
+
         n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
         else:
             n_batches = math.ceil(n_batches)
 
+        logs = {'n_batches':n_batches}
         for i in range(epochs):
-            print("Epoch", i+1)
-            for batch_no, (x, y) in enumerate(dataloader):
-                batch_loss = self.train_batch(x, y)
-                avg_loss = ((avg_loss * batch_no) + batch_loss)/ (batch_no + 1)
-                #TODO: Seperate out print logic. Implement callbacks
-                if batch_no > 0:
-                    print("\r", end="")
-                print(f" Batch {batch_no+1}/{n_batches} Loss {round(avg_loss,4)}", end="")
-            print("\n")
+            self.callbacks.on_epoch_begin(logs={'epoch':i})
+
+            for batch_no, (x, Y) in enumerate(dataloader):
+                logs['batch_no'] = batch_no
+                self.callbacks.on_train_batch_begin(logs=logs)
+                batch_loss, y = self.train_batch(x, Y)
+                logs['batch_loss'] = batch_loss
+                logs['y'] = y
+                logs['Y'] = Y
+                self.callbacks.on_train_batch_end(logs=logs)
+
+            self.callbacks.on_epoch_end(logs={'epoch':i})
         
-        return avg_loss
+        self.callbacks.on_train_end()
     
     def evaluate_generator(self, dataloader):
-        avg_loss = 0.
-        print("Evaluating")
+        self.callbacks.on_eval_begin()
         n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
             n_batches = int(n_batches)
         else:
             n_batches = math.ceil(n_batches)
+        logs = {'n_batches': n_batches}
+        for batch_no, (x, Y) in enumerate(dataloader):
+            logs['batch_no'] = batch_no
+            self.callbacks.on_eval_batch_begin(logs=logs)
+            batch_loss, y = self.evaluate_batch(x, Y)
+            logs['batch_loss'] = batch_loss
+            logs['y'] = y
+            logs['Y'] = Y
+            self.callbacks.on_eval_batch_end(logs=logs)
 
-        for batch_no, (x, y) in enumerate(dataloader):
-            batch_loss = self.evaluate_batch(x, y)
-            avg_loss += batch_loss
-            #TODO: Seperate out print logic. Implement callbacks
-        avg_loss /= n_batches
-        print("Average Loss", round(avg_loss, 4))
-
-        return avg_loss
+        self.callbacks.on_eval_end()
     
     def predict_generator(self, dataloader):
         outs = []
@@ -102,7 +120,7 @@ class Trainer(object):
         loss = self.loss_fn(output, targets)
         loss.backward()
         self.optimizer.step()
-        return loss.item()
+        return loss.item(), output
     
     def evaluate_batch(self, inputs, targets):
         if self.model.training:
@@ -118,7 +136,7 @@ class Trainer(object):
             output = self.model(inputs)
             loss = self.loss_fn(output, targets)
 
-        return loss.item()
+        return loss.item(), output
     
     def predict_batch(self, inputs):
         if self.model.training:
