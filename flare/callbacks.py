@@ -143,10 +143,6 @@ class MetricLogger(Callback):
         for m in self.metrics:
             m.reset_states()
 
-    def on_train_end(self, logs):
-        print(self.train_logs)
-        print(self.test_logs)
-
     def on_eval_begin(self, logs={}):
         for m in self.metrics:
             m.reset_states()

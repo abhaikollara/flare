@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader
 from .data import FlareDataset, convert_to_tensor
 from .callbacks import CallbackList, Baselogger, MetricLogger
 from .metrics import Accuracy, Metric, Loss
+from .utils import split
 import math
 import time
 
@@ -17,17 +18,24 @@ class Trainer(object):
 
         # Callbacks and metrics
         self.metrics = [Loss(), *metrics]
-        self.callbacks = CallbackList(self, [Baselogger(metrics=self.metrics), MetricLogger(self.metrics)])
+        self.history = MetricLogger(self.metrics)
+        self.callbacks = CallbackList(self, [Baselogger(metrics=self.metrics), self.history])
 
         for metric in self.metrics:
             if not isinstance(metric, Metric):# Check for all
                 raise TypeError("metric must be an instance of Metric")
     
-    def train(self, inputs, targets, epochs=1, batch_size=32, shuffle=True):
-        dataset = FlareDataset(inputs, targets)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    def train(self, inputs, targets, epochs=1, batch_size=32, validation_data=None, validation_split=None, shuffle=True):
+        train_dataset = FlareDataset(inputs, targets)
+        # import ipdb; ipdb.set_trace()
+        if validation_data is None and validation_split is not None:
+            (train_inputs, test_inputs), (train_targets, test_targets) = split([inputs, targets], validation_split)
+            train_dataset = FlareDataset(train_inputs, train_targets)
+            validation_data = (test_inputs, test_targets)
 
-        return self.train_generator(dataloader, epochs=epochs)
+        dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+
+        return self.train_generator(dataloader, epochs=epochs, validation_data=validation_data)
     
     def evaluate(self, inputs, targets, batch_size=32):
         dataset = FlareDataset(inputs, targets)
@@ -41,7 +49,12 @@ class Trainer(object):
 
         return self.predict_generator(dataloader)
 
-    def train_generator(self, dataloader, epochs=1):
+    def train_generator(self, dataloader, epochs=1, validation_data=None):
+        if validation_data is not None:
+            test_inputs, test_targets = validation_data
+            test_dataset = FlareDataset(test_inputs, test_targets)
+            test_dataloader = DataLoader(test_dataset, batch_size=dataloader.batch_size)
+
         self.callbacks.on_train_begin()
 
         n_batches = len(dataloader.dataset)/dataloader.batch_size
@@ -64,8 +77,11 @@ class Trainer(object):
                 self.callbacks.on_train_batch_end(logs=logs)
 
             self.callbacks.on_epoch_end(logs={'epoch':i})
-        
+            if validation_data is not None:
+                self.evaluate_generator(test_dataloader)
         self.callbacks.on_train_end()
+
+        return self.history
     
     def evaluate_generator(self, dataloader):
         self.callbacks.on_eval_begin()
