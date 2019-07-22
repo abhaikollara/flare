@@ -47,5 +47,6 @@ test_x /= 255.0
 
 model = Net()
 trainer = Trainer(model, F.nll_loss, Adam(model.parameters()), metrics=[Accuracy()])
-trainer.train(train_x, train_y, batch_size=64, epochs=2)
-trainer.evaluate(test_x, test_y)
+history = trainer.train(train_x, train_y, batch_size=64, epochs=2, validation_split=0.2)
+print(history.train_logs)
+print(history.test_logs)
