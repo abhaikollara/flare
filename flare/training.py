@@ -71,9 +71,7 @@ class Trainer(object):
                 logs['batch_no'] = batch_no
                 self.callbacks.on_train_batch_begin(logs=logs)
                 batch_loss, y = self.train_batch(x, Y)
-                logs['batch_loss'] = batch_loss
-                logs['y'] = y
-                logs['Y'] = Y
+                logs.update({'batch_loss':batch_loss, 'y':y, 'Y':Y})
                 self.callbacks.on_train_batch_end(logs=logs)
 
             self.callbacks.on_epoch_end(logs={'epoch':i})
@@ -95,9 +93,7 @@ class Trainer(object):
             logs['batch_no'] = batch_no
             self.callbacks.on_eval_batch_begin(logs=logs)
             batch_loss, y = self.evaluate_batch(x, Y)
-            logs['batch_loss'] = batch_loss
-            logs['y'] = y
-            logs['Y'] = Y
+            logs.update({'batch_loss':batch_loss, 'y':y, 'Y':Y})
             self.callbacks.on_eval_batch_end(logs=logs)
 
         self.callbacks.on_eval_end()
