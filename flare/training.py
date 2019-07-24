@@ -23,7 +23,7 @@ class Trainer(object):
 
         for metric in self.metrics:
             if not isinstance(metric, Metric):# Check for all
-                raise TypeError("metric must be an instance of Metric")
+                raise TypeError(f"metric must be an instance of Metric, found {type(metric)}")
     
     def train(self, inputs, targets, epochs=1, batch_size=32, validation_data=None, validation_split=None, shuffle=True):
         train_dataset = FlareDataset(inputs, targets)
@@ -57,11 +57,10 @@ class Trainer(object):
 
         self.callbacks.on_train_begin()
 
-        n_batches = len(dataloader.dataset)/dataloader.batch_size
         if dataloader.drop_last:
-            n_batches = int(n_batches)
+            n_batches = int(len(dataloader.dataset)/dataloader.batch_size)
         else:
-            n_batches = math.ceil(n_batches)
+            n_batches = math.ceil(len(dataloader.dataset)/dataloader.batch_size)
 
         logs = {'n_batches':n_batches}
         for i in range(epochs):
